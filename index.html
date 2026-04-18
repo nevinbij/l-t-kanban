@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>L&T Construction & Mining Machinery - Kanban Board</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --lt-blue: #005A9C;
+            --lt-dark-blue: #003D6B;
+            --lt-orange: #FF6600;
+            --lt-green: #00A651;
+            --lt-gray: #F5F5F5;
+            --lt-text: #333333;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            color: var(--lt-text);
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--lt-blue) 0%, var(--lt-dark-blue) 100%);
+            color: white;
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow-lg);
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo {
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 2px;
+        }
+
+        .logo span {
+            color: var(--lt-orange);
+        }
+
+        .subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .btn-primary {
+            background: var(--lt-orange);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #e55c00;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .btn-secondary {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .btn-success {
+            background: var(--lt-green);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #008440;
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            padding: 20px;
+            background: rgba(255,255,255,0.95);
+            margin: 20px 40px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            flex-wrap: wrap;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, var(--lt-blue), var(--lt-dark-blue));
+            border-radius: 12px;
+            color: white;
+            min-width: 150px;
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        .kanban-container {
+            display: flex;
+            gap: 20px;
+            padding: 20px 40px;
+            overflow-x: auto;
+            min-height: calc(100vh - 280px);
+        }
+
+        .kanban-column {
+            background: rgba(255,255,255,0.95);
+            border-radius: 16px;
+            min-width: 320px;
+            max-width: 320px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-lg);
+            transition: transform 0.3s ease;
+        }
+
+        .kanban-column:hover {
+            transform: translateY(-5px);
+        }
+
+        .column-header {
+            padding: 20px;
+            border-radius: 16px 16px 0 0;
+            color: white;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .column-header .column-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .column-count {
+            background: rgba(255,255,255,0.3);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+        }
+
+        .column-backlog { background: linear-gradient(135deg, #6c757d, #495057); }
+        .column-design { background: linear-gradient(135deg, #17a2b8, #138496); }
+        .column-procurement { background: linear-gradient(135deg, #ffc107, #e0a800); color: #333; }
+        .column-production { background: linear-gradient(135deg, var(--lt-orange), #e55c00); }
+        .column-quality { background: linear-gradient(135deg, #6f42c1, #5a32a3); }
+        .column-testing { background: linear-gradient(135deg, #20c997, #198754); }
+        .column-completed { background: linear-gradient(135deg, var(--lt-green), #008440); }
+
+        .column-content {
+            padding: 15px;
+            flex: 1;
+            overflow-y: auto;
+            max-height: calc(100vh - 400px);
+            min-height: 400px;
+        }
+
+        .column-content::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .column-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .column-content::-webkit-scrollbar-thumb {
+            background: var(--lt-blue);
+            border-radius: 10px;
+        }
+
+        .kanban-card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 15px;
+            box-shadow: var(--shadow);
+            cursor: grab;
+            transition: all 0.3s ease;
+            border-left: 4px solid var(--lt-blue);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .kanban-card:hover {
+            transform: translateX(5px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .kanban-card.dragging {
+            opacity: 0.5;
+            cursor: grabbing;
+        }
+
+        .kanban-card.drag-over {
+            border: 2px dashed var(--lt-orange);
+            background: rgba(255, 102, 0, 0.1);
+        }
+
+        .card-priority-high { border-left-color: #dc3545; }
+        .card-priority-medium { border-left-color: #ffc107; }
+        .card-priority-low { border-left-color: #28a745; }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .card-id {
+            font-size: 12px;
+            color: #666;
+            background: var(--lt-gray);
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .card-title {
+            font-weight: 600;
+            color: var(--lt-dark-blue);
+            margin-bottom: 8px;
+        }
+
+        .card-description {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 12px;
+            line-height: 1.5;
+        }
+
+        .card-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .card-tags {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+
+        .tag {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        .tag-excavator { background: #e3f2fd; color: #1976d2; }
+        .tag-dozer { background: #fff3e0; color: #f57c00; }
+        .tag-crane { background: #f3e5f5; color: #7b1fa2; }
+        .tag-loader { background: #e8f5e9; color: #388e3c; }
+        .tag-dumper { background: #fce4ec; color: #c2185b; }
+        .tag-parts { background: #ffebee; color: #d32f2f; }
+
+        .card-assignee {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .assignee-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--lt-blue);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #eee;
+        }
+
+        .card-date {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .card-action-btn {
+            width: 28px;
+            height: 28px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+
+        .card-action-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .btn-edit { background: #e3f2fd; color: #1976d2; }
+        .btn-delete { background: #ffebee; color: #d32f2f; }
+        .btn-view { background: #f3e5f5; color: #7b1fa2; }
+
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 550px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            animation: modalSlide 0.3s ease;
+        }
+
+        @keyframes modalSlide {
+            from { opacity: 0; transform: translateY(-50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            color: var(--lt-dark-blue);
+            font-size: 20px;
+        }
+
+        .modal-close {
+            width: 36px;
+            height: 36px;
+            border: none;
+            border-radius: 50%;
+            background: #f5f5f5;
+            cursor: pointer;
+            font-size: 20px;
+            color: #666;
+            transition: all 0.2s ease;
+        }
+
+        .modal-close:hover {
+            background: var(--lt-orange);
+            color: white;
+        }
+
+        .modal-body {
+            padding: 25px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--lt-dark-blue);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--lt-blue);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        .modal-footer {
+            padding: 20px 25px;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .assignee-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .assignee-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 15px;
+            background: var(--lt-gray);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .assignee-item:hover {
+            background: #e8e8e8;
+        }
+
+        .assignee-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .assignee-avatar-large {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--lt-blue), var(--lt-dark-blue));
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .assignee-details h4 {
+            color: var(--lt-dark-blue);
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+
+        .assignee-details p {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .assignee-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .task-count-badge {
+            background: var(--lt-blue);
+            color: white;
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+
+        .filter-bar {
+            display: flex;
+            gap: 15px;
+            padding: 20px 40px;
+            background: rgba(255,255,255,0.95);
+            margin: 0 40px 20px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            flex-wrap: wrap;
+        }
+
+        .search-box {
+            flex: 1;
+            min-width: 250px;
+            position: relative;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 15px 12px 45px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .search-box input:focus {
+            outline: none;
+            border-color: var(--lt-blue);
+        }
+
+        .search-box::before {
+            content: "🔍";
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .filter-select {
+            padding: 12px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            background: white;
+        }
+
+        .filter-select:focus {
+            outline: none;
+            border-color: var(--lt-blue);
+        }
+
+        .toast-container {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 2000;
+        }
+
+        .toast {
+            background: white;
+            padding: 15px 25px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            animation: toastSlide 0.3s ease;
+            border-left: 4px solid var(--lt-green);
+        }
+
+        .toast.toast-error {
+            border-left-color: #dc3545;
+        }
+
+        .toast.toast-warning {
+            border-left-color: #ffc107;
+        }
+
+        @keyframes toastSlide {
+            from { opacity: 0; transform: translateX(100px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--lt-blue), var(--lt-orange));
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        @media (max-width: 1200px) {
+            .kanban-container { flex-wrap: nowrap; }
+        }
+
+        @media (max-width: 768px) {
+            .header { flex-direction: column; gap: 15px; padding: 20px; }
+            .stats-bar { flex-wrap: wrap; margin: 10px 20px; }
+            .kanban-container { padding: 10px 20px; }
+            .filter-bar { margin: 0 20px 10px; padding: 15px; }
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .card-new { animation: pulse 0.5s ease; }
+
+        .context-menu {
+            position: fixed;
+            background: white;
+            border-radius: 8px;
+            box-shadow: var(--shadow-lg);
+            padding: 8px 0;
+            min-width: 180px;
+            z-index: 3000;
+            display: none;
+        }
+
+        .context-menu.active { display: block; }
+
+        .context-menu-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s ease;
+        }
+
+        .context-menu-item:hover { background: var(--lt-gray); }
+        .context-menu-divider { height: 1px; background: #e0e0e0; margin: 8px 0; }
+
+        .dropdown { position: relative; display: inline-block; }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            background: white;
+            min-width: 180px;
+            box-shadow: var(--shadow-lg);
+            border-radius: 8px;
+            padding: 8px 0;
+            z-index: 2000;
+            margin-top: 8px;
+        }
+
+        .dropdown-content.show { display: block; }
+
+        .dropdown-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s ease;
+            color: var(--lt-text);
+        }
+
+        .dropdown-item:hover { background: var(--lt-gray); }
+
+        .empty-state { text-align: center; padding: 40px 20px; color: #999; }
+        .empty-state-icon { font-size: 48px; margin-bottom: 15px; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo-section">
+            <div class="logo">L&T <span>CMB</span></div>
+            <div>
+                <div style="font-weight: 600;">Construction & Mining Machinery</div>
+                <div class="subtitle">Kanban Project Management Board</div>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="openAssigneeModal()">👥 Team</button>
+            <div class="dropdown">
+                <button class="btn btn-secondary" onclick="toggleExportDropdown()">📊 Export ▼</button>
+                <div class="dropdown-content" id="export-dropdown">
+                    <div class="dropdown-item" onclick="exportToExcel()">📈 Excel (.xlsx)</div>
+                    <div class="dropdown-item" onclick="exportToCSV()">📄 CSV (.csv)</div>
+                    <div class="dropdown-item" onclick="exportData()">💾 JSON (.json)</div>
+                </div>
+            </div>
+            <button class="btn btn-secondary" onclick="importData()">📁 Import</button>
+            <button class="btn btn-primary" onclick="openModal()">➕ New Task</button>
+        </div>
+    </header>
+
+    <div class="stats-bar">
+        <div class="stat-item">
+            <div class="stat-value" id="total-tasks">0</div>
+            <div class="stat-label">Total Tasks</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="in-progress-tasks">0</div>
+            <div class="stat-label">In Progress</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="completed-tasks">0</div>
+            <div class="stat-label">Completed</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value" id="efficiency-rate">0%</div>
+            <div class="stat-label">Efficiency</div>
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="Search tasks, equipment, IDs..." oninput="filterTasks()">
+        </div>
+        <select class="filter-select" id="priority-filter" onchange="filterTasks()">
+            <option value="">All Priorities</option>
+            <option value="high">🔴 High</option>
+            <option value="medium">🟡 Medium</option>
+            <option value="low">🟢 Low</option>
+        </select>
+        <select class="filter-select" id="equipment-filter" onchange="filterTasks()">
+            <option value="">All Equipment</option>
+            <option value="excavator">Excavator</option>
+            <option value="dozer">Dozer</option>
+            <option value="crane">Crane</option>
+            <option value="loader">Loader</option>
+            <option value="dumper">Dumper</option>
+            <option value="parts">Parts</option>
+        </select>
+        <select class="filter-select" id="assignee-filter" onchange="filterTasks()">
+            <option value="">All Assignees</option>
+        </select>
+    </div>
+
+    <div class="kanban-container">
+        <div class="kanban-column" data-status="backlog">
+            <div class="column-header column-backlog">
+                <div class="column-title"><span>📋</span><span>Backlog</span></div>
+                <span class="column-count" id="count-backlog">0</span>
+            </div>
+            <div class="column-content" id="backlog" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)"></div>
+        </div>
+        <div class="kanban-column" data-status="design">
+            <div class="column-header column-design">
+                <div class="column-title"><span>✏️</span><span>Design & Engineering</span></div>
+                <span class="column-count" id="count-design">0</span>
+            </div>
+            <div class="column-content" id="design" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)"></div>
+        </div>
+        <div class="kanban-column" data-status="procurement">
+            <div class="column-header column-procurement">
+                <div class="column-title"><span>📦</span><span>Procurement</span></div>
+                <span class="column-count" id="count-procurement">0</span>
+            </div>
+            <div class="column-content" id="procurement" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)"></div>
+        </div>
+        <div class="kanban-column" data-status="production">
+            <div class="column-header column-production">
+                <div class="column-title"><span>⚙️</span><span>Production</span></div>
+                <span class="column-count" id="count-production">0</span>
+            </div>
+            <div class="column-content" id="production" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)"></div>
+        </div>
+        <div class="kanban-column" data-status="quality">
+            <div class="column-header column-quality">
+                <div class="column-title"><span>✅</span><span>Quality Check</span></div>
+                <span class="column-count" id="count-quality">0</span>
+            </div>
+            <div class="column-content" id="quality" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)"></div>
+        </div>
+        <div class="kanban-column" data-status="testing">
+            <div class="column-header column-testing">
+                <div class="column-title"><span>🧪</span><span>Testing & Commissioning</span></div>
+                <span class="column-count" id="count-testing">0</span>
+            </div>
+            <div class="column-content" id="testing" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)"></div>
+        </div>
+        <div class="kanban-column" data-status="completed">
+            <div class="column-header column-completed">
+                <div class="column-title"><span>🎉</span><span>Completed</span></div>
+                <span class="column-count" id="count-completed">0</span>
+            </div>
+            <div class="column-content" id="completed" ondrop="drop(event)" ondragover="allowDrop(event)" ondragenter="dragEnter(event)" ondragleave="dragLeave(event)"></div>
+        </div>
+    </div>
+
+    <!-- Task Modal -->
+    <div class="modal-overlay" id="task-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="modal-title">Add New Task</h2>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <form id="task-form">
+                    <input type="hidden" id="task-id">
+                    <div class="form-group">
+                        <label for="task-title">Task Title *</label>
+                        <input type="text" id="task-title" required placeholder="Enter task title">
+                    </div>
+                    <div class="form-group">
+                        <label for="task-description">Description</label>
+                        <textarea id="task-description" placeholder="Enter task description"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="task-priority">Priority *</label>
+                            <select id="task-priority" required>
+                                <option value="low">🟢 Low</option>
+                                <option value="medium" selected>🟡 Medium</option>
+                                <option value="high">🔴 High</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="task-equipment">Equipment Type *</label>
+                            <select id="task-equipment" required>
+                                <option value="excavator">Excavator</option>
+                                <option value="dozer">Dozer</option>
+                                <option value="crane">Crane</option>
+                                <option value="loader">Loader</option>
+                                <option value="dumper">Dumper</option>
+                                <option value="parts">Parts</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="task-status">Status</label>
+                            <select id="task-status">
+                                <option value="backlog">Backlog</option>
+                                <option value="design">Design & Engineering</option>
+                                <option value="procurement">Procurement</option>
+                                <option value="production">Production</option>
+                                <option value="quality">Quality Check</option>
+                                <option value="testing">Testing</option>
+                                <option value="completed">Completed</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="task-assignee">Assignee</label>
+                            <input type="text" id="task-assignee" list="assignee-datalist" placeholder="Select or enter assignee">
+                            <datalist id="assignee-datalist"></datalist>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="task-due-date">Due Date</label>
+                            <input type="date" id="task-due-date">
+                        </div>
+                        <div class="form-group">
+                            <label for="task-progress">Progress (%)</label>
+                            <input type="number" id="task-progress" min="0" max="100" value="0">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveTask()">Save Task</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Modal -->
+    <div class="modal-overlay" id="view-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Task Details</h2>
+                <button class="modal-close" onclick="closeViewModal()">×</button>
+            </div>
+            <div class="modal-body" id="view-modal-content"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeViewModal()">Close</button>
+                <button class="btn btn-primary" onclick="editFromView()">Edit Task</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assignee Modal -->
+    <div class="modal-overlay" id="assignee-modal">
+        <div class="modal" style="max-width: 600px;">
+            <div class="modal-header">
+                <h2>👥 Team Members Management</h2>
+                <button class="modal-close" onclick="closeAssigneeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row" style="margin-bottom: 20px;">
+                    <div class="form-group" style="flex: 2;">
+                        <input type="text" id="new-assignee-name" placeholder="Full Name" style="width: 100%;">
+                    </div>
+                    <div class="form-group" style="flex: 2;">
+                        <input type="email" id="new-assignee-email" placeholder="Email" style="width: 100%;">
+                    </div>
+                    <div class="form-group">
+                        <button class="btn btn-primary" onclick="addAssignee()" style="width: 100%;">Add</button>
+                    </div>
+                </div>
+                <div class="assignee-list" id="assignee-list-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Assignee Modal -->
+    <div class="modal-overlay" id="edit-assignee-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>Edit Team Member</h2>
+                <button class="modal-close" onclick="closeEditAssigneeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit-assignee-id">
+                <div class="form-group">
+                    <label for="edit-assignee-name">Full Name</label>
+                    <input type="text" id="edit-assignee-name" placeholder="Full Name">
+                </div>
+                <div class="form-group">
+                    <label for="edit-assignee-email">Email</label>
+                    <input type="email" id="edit-assignee-email" placeholder="Email">
+                </div>
+                <div class="form-group">
+                    <label for="edit-assignee-role">Role/Department</label>
+                    <input type="text" id="edit-assignee-role" placeholder="e.g., Project Engineer">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEditAssigneeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveEditAssignee()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div class="context-menu" id="context-menu">
+        <div class="context-menu-item" onclick="contextAction('view')">👁️ View</div>
+        <div class="context-menu-item" onclick="contextAction('edit')">✏️ Edit</div>
+        <div class="context-menu-item" onclick="contextAction('duplicate')">📋 Duplicate</div>
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-item" onclick="contextAction('delete')" style="color: #dc3545;">🗑️ Delete</div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script>
+        // Data Store
+        let tasks = [];
+        let assignees = [];
+        let currentTaskId = null;
+        let contextTaskId = null;
+        let excelAvailable = false;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Kanban Board initializing...');
+            loadTasks();
+            loadAssignees();
+            updateStats();
+            updateAssigneeFilter();
+            setupKeyboardShortcuts();
+            console.log('Kanban Board initialized successfully');
+        });
+
+        // Check if Excel library is available
+        window.addEventListener('load', () => {
+            excelAvailable = typeof XLSX !== 'undefined';
+            console.log('Excel library available:', excelAvailable);
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.dropdown')) {
+                document.getElementById('export-dropdown').classList.remove('show');
+            }
+        });
+
+        function generateId() {
+            return 'LT-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substr(2, 4).toUpperCase();
+        }
+
+        function generateAssigneeId() {
+            return 'A-' + Date.now().toString(36).toUpperCase() + '-' + Math.random().toString(36).substr(2, 3).toUpperCase();
+        }
+
+        function loadTasks() {
+            try {
+                const stored = localStorage.getItem('ltcmb_kanban_tasks');
+                if (stored) {
+                    tasks = JSON.parse(stored);
+                    renderAllTasks();
+                } else {
+                    addSampleTasks();
+                }
+            } catch (e) {
+                console.error('Error loading tasks:', e);
+                addSampleTasks();
+            }
+        }
+
+        function loadAssignees() {
+            try {
+                const stored = localStorage.getItem('ltcmb_kanban_assignees');
+                if (stored) {
+                    assignees = JSON.parse(stored);
+                } else {
+                    assignees = [
+                        { id: generateAssigneeId(), name: 'Rajesh Kumar', email: 'rajesh.kumar@lntcmb.com', role: 'Project Engineer' },
+                        { id: generateAssigneeId(), name: 'Priya Sharma', email: 'priya.sharma@lntcmb.com', role: 'Design Engineer' },
+                        { id: generateAssigneeId(), name: 'Amit Patel', email: 'amit.patel@lntcmb.com', role: 'Procurement Manager' },
+                        { id: generateAssigneeId(), name: 'Sneha Reddy', email: 'sneha.reddy@lntcmb.com', role: 'Quality Inspector' },
+                        { id: generateAssigneeId(), name: 'Vikram Singh', email: 'vikram.singh@lntcmb.com', role: 'Site Manager' },
+                        { id: generateAssigneeId(), name: 'Anita Desai', email: 'anita.desai@lntcmb.com', role: 'Test Engineer' },
+                        { id: generateAssigneeId(), name: 'Karthik Iyer', email: 'karthik.iyer@lntcmb.com', role: 'Technical Lead' },
+                        { id: generateAssigneeId(), name: 'Deepak Joshi', email: 'deepak.joshi@lntcmb.com', role: 'Production Supervisor' }
+                    ];
+                    saveAssignees();
+                }
+            } catch (e) {
+                console.error('Error loading assignees:', e);
+            }
+        }
+
+        function saveAssignees() {
+            localStorage.setItem('ltcmb_kanban_assignees', JSON.stringify(assignees));
+            updateAssigneeFilter();
+            renderAssigneeList();
+        }
+
+        function addSampleTasks() {
+            tasks = [
+                { id: generateId(), title: 'PC3000 Excavator Hydraulic System Upgrade', description: 'Upgrade hydraulic system for improved efficiency', priority: 'high', equipment: 'excavator', status: 'production', assignee: 'Rajesh Kumar', dueDate: '2026-05-15', progress: 65, createdAt: new Date().toISOString() },
+                { id: generateId(), title: 'D475 Dozer Blade Control Module', description: 'Design new electronic control module', priority: 'high', equipment: 'dozer', status: 'design', assignee: 'Priya Sharma', dueDate: '2026-04-30', progress: 40, createdAt: new Date().toISOString() },
+                { id: generateId(), title: 'WA900 Loader Transmission Parts', description: 'Procure transmission components', priority: 'medium', equipment: 'loader', status: 'procurement', assignee: 'Amit Patel', dueDate: '2026-05-01', progress: 30, createdAt: new Date().toISOString() },
+                { id: generateId(), title: '830E Dump Truck Safety Audit', description: 'Complete safety inspection', priority: 'high', equipment: 'dumper', status: 'quality', assignee: 'Sneha Reddy', dueDate: '2026-04-25', progress: 80, createdAt: new Date().toISOString() },
+                { id: generateId(), title: 'Remote Teleoperation System', description: 'Integrate EarthBrain teleoperation', priority: 'high', equipment: 'excavator', status: 'backlog', assignee: 'Vikram Singh', dueDate: '2026-06-30', progress: 0, createdAt: new Date().toISOString() },
+                { id: generateId(), title: 'HB365 Hybrid Battery Test', description: 'Battery performance testing', priority: 'medium', equipment: 'excavator', status: 'testing', assignee: 'Anita Desai', dueDate: '2026-05-10', progress: 90, createdAt: new Date().toISOString() },
+                { id: generateId(), title: 'Motor Grader GPS Kit', description: 'GPS calibration kit development', priority: 'low', equipment: 'parts', status: 'completed', assignee: 'Karthik Iyer', dueDate: '2026-04-15', progress: 100, createdAt: new Date().toISOString() },
+                { id: generateId(), title: 'Crane Load Monitoring', description: 'Install load monitoring sensors', priority: 'medium', equipment: 'crane', status: 'production', assignee: 'Deepak Joshi', dueDate: '2026-05-20', progress: 55, createdAt: new Date().toISOString() }
+            ];
+            saveTasks();
+            renderAllTasks();
+        }
+
+        function saveTasks() {
+            localStorage.setItem('ltcmb_kanban_tasks', JSON.stringify(tasks));
+            updateStats();
+        }
+
+        function renderAllTasks() {
+            ['backlog', 'design', 'procurement', 'production', 'quality', 'testing', 'completed'].forEach(status => {
+                document.getElementById(status).innerHTML = '';
+            });
+            tasks.forEach(task => renderTask(task));
+            updateColumnCounts();
+            filterTasks();
+        }
+
+        function renderTask(task) {
+            const column = document.getElementById(task.status);
+            if (!column) return;
+
+            const card = document.createElement('div');
+            card.className = `kanban-card card-priority-${task.priority} card-new`;
+            card.draggable = true;
+            card.id = `task-${task.id}`;
+            card.ondragstart = drag;
+            card.oncontextmenu = (e) => showContextMenu(e, task.id);
+            card.onclick = (e) => {
+                if (e.target.className !== 'card-action-btn' && e.target.tagName !== 'BUTTON') {
+                    viewTask(task.id);
+                }
+            };
+
+            const initials = task.assignee ? getAssigneeInitials(task.assignee) : '?';
+            const equipmentTag = task.equipment.charAt(0).toUpperCase() + task.equipment.slice(1);
+
+            card.innerHTML = `
+                <div class="card-header">
+                    <span class="card-id">${task.id}</span>
+                    <span class="tag tag-${task.equipment}">${equipmentTag}</span>
+                </div>
+                <div class="card-title">${escapeHtml(task.title)}</div>
+                <div class="card-description">${escapeHtml(task.description)}</div>
+                <div class="card-meta">
+                    <div class="card-tags">
+                        <span class="tag" style="background: ${getPriorityColor(task.priority)}20; color: ${getPriorityColor(task.priority)}">${task.priority.charAt(0).toUpperCase() + task.priority.slice(1)}</span>
+                    </div>
+                    <div class="card-assignee">
+                        <div class="assignee-avatar">${initials}</div>
+                        <span>${escapeHtml(task.assignee || 'Unassigned')}</span>
+                    </div>
+                </div>
+                <div class="progress-bar"><div class="progress-fill" style="width: ${task.progress || 0}%"></div></div>
+                <div class="card-footer">
+                    <span class="card-date">${formatDate(task.dueDate)}</span>
+                    <div class="card-actions">
+                        <button class="card-action-btn btn-view" onclick="event.stopPropagation(); viewTask('${task.id}')">👁️</button>
+                        <button class="card-action-btn btn-edit" onclick="event.stopPropagation(); editTask('${task.id}')">✏️</button>
+                        <button class="card-action-btn btn-delete" onclick="event.stopPropagation(); deleteTask('${task.id}')">🗑️</button>
+                    </div>
+                </div>
+            `;
+
+            column.appendChild(card);
+            setTimeout(() => card.classList.remove('card-new'), 500);
+        }
+
+        function getAssigneeInitials(name) {
+            if (!name) return '?';
+            return name.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function getPriorityColor(priority) {
+            return { high: '#dc3545', medium: '#ffc107', low: '#28a745' }[priority] || '#666';
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return 'No due date';
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = date - now;
+            const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
+            if (days < 0) return `<span style="color:#dc3545">${Math.abs(days)}d overdue</span>`;
+            if (days === 0) return '<span style="color:#ffc107">Due today</span>';
+            if (days === 1) return 'Due tomorrow';
+            if (days <= 7) return `${days}d left`;
+            return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+        }
+
+        function updateColumnCounts() {
+            ['backlog', 'design', 'procurement', 'production', 'quality', 'testing', 'completed'].forEach(status => {
+                document.getElementById(`count-${status}`).textContent = tasks.filter(t => t.status === status).length;
+            });
+        }
+
+        function updateStats() {
+            const total = tasks.length;
+            const inProgress = tasks.filter(t => ['production', 'quality', 'testing'].includes(t.status)).length;
+            const completed = tasks.filter(t => t.status === 'completed').length;
+            const efficiency = total > 0 ? Math.round((completed / total) * 100) : 0;
+            document.getElementById('total-tasks').textContent = total;
+            document.getElementById('in-progress-tasks').textContent = inProgress;
+            document.getElementById('completed-tasks').textContent = completed;
+            document.getElementById('efficiency-rate').textContent = efficiency + '%';
+        }
+
+        function updateAssigneeFilter() {
+            const assigneeNames = [...new Set(assignees.map(a => a.name))];
+            const taskAssignees = [...new Set(tasks.map(t => t.assignee).filter(a => a))];
+            const allAssignees = [...new Set([...assigneeNames, ...taskAssignees])];
+            const select = document.getElementById('assignee-filter');
+            select.innerHTML = '<option value="">All Assignees</option>';
+            allAssignees.forEach(a => {
+                select.innerHTML += `<option value="${escapeHtml(a)}">${escapeHtml(a)}</option>`;
+            });
+            const datalist = document.getElementById('assignee-datalist');
+            datalist.innerHTML = '';
+            assignees.forEach(a => {
+                datalist.innerHTML += `<option value="${escapeHtml(a.name)}">`;
+            });
+        }
+
+        function renderAssigneeList() {
+            const container = document.getElementById('assignee-list-container');
+            if (!container) return;
+            container.innerHTML = '';
+            if (assignees.length === 0) {
+                container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">👥</div><p>No team members yet</p></div>';
+                return;
+            }
+            assignees.forEach(assignee => {
+                const taskCount = tasks.filter(t => t.assignee === assignee.name).length;
+                const item = document.createElement('div');
+                item.className = 'assignee-item';
+                item.innerHTML = `
+                    <div class="assignee-info">
+                        <div class="assignee-avatar-large">${getAssigneeInitials(assignee.name)}</div>
+                        <div class="assignee-details">
+                            <h4>${escapeHtml(assignee.name)} <span class="task-count-badge">${taskCount} tasks</span></h4>
+                            <p>${escapeHtml(assignee.email || 'No email')} ${assignee.role ? `• ${escapeHtml(assignee.role)}` : ''}</p>
+                        </div>
+                    </div>
+                    <div class="assignee-actions">
+                        <button class="btn btn-edit" onclick="openEditAssigneeModal('${assignee.id}')">✏️</button>
+                        <button class="btn btn-delete" onclick="deleteAssignee('${assignee.id}')">🗑️</button>
+                    </div>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        function allowDrop(e) { e.preventDefault(); }
+        function drag(e) { e.dataTransfer.setData('text', e.target.id); e.target.classList.add('dragging'); }
+        function dragEnter(e) { if (e.target.classList.contains('column-content')) e.target.classList.add('drag-over'); }
+        function dragLeave(e) { if (e.target.classList.contains('column-content')) e.target.classList.remove('drag-over'); }
+
+        function drop(e) {
+            e.preventDefault();
+            const column = e.target.closest('.column-content');
+            if (column) {
+                column.classList.remove('drag-over');
+                const taskId = e.dataTransfer.getData('text');
+                const newStatus = column.id;
+                const task = tasks.find(t => t.id === taskId.replace('task-', ''));
+                if (task) {
+                    task.status = newStatus;
+                    saveTasks();
+                    renderAllTasks();
+                    showToast(`Task moved to ${newStatus.charAt(0).toUpperCase() + newStatus.slice(1)}`);
+                }
+            }
+            document.querySelectorAll('.dragging').forEach(el => el.classList.remove('dragging'));
+        }
+
+        function openModal(editId = null) {
+            const modal = document.getElementById('task-modal');
+            const title = document.getElementById('modal-title');
+            const form = document.getElementById('task-form');
+            if (editId) {
+                const task = tasks.find(t => t.id === editId);
+                if (task) {
+                    title.textContent = 'Edit Task';
+                    document.getElementById('task-id').value = task.id;
+                    document.getElementById('task-title').value = task.title;
+                    document.getElementById('task-description').value = task.description;
+                    document.getElementById('task-priority').value = task.priority;
+                    document.getElementById('task-equipment').value = task.equipment;
+                    document.getElementById('task-status').value = task.status;
+                    document.getElementById('task-assignee').value = task.assignee || '';
+                    document.getElementById('task-due-date').value = task.dueDate || '';
+                    document.getElementById('task-progress').value = task.progress || 0;
+                }
+            } else {
+                title.textContent = 'Add New Task';
+                form.reset();
+                document.getElementById('task-id').value = '';
+                document.getElementById('task-progress').value = '0';
+            }
+            modal.classList.add('active');
+        }
+
+        function closeModal() { document.getElementById('task-modal').classList.remove('active'); }
+        function closeViewModal() { document.getElementById('view-modal').classList.remove('active'); }
+
+        function saveTask() {
+            const id = document.getElementById('task-id').value;
+            const title = document.getElementById('task-title').value;
+            const description = document.getElementById('task-description').value;
+            const priority = document.getElementById('task-priority').value;
+            const equipment = document.getElementById('task-equipment').value;
+            const status = document.getElementById('task-status').value;
+            const assignee = document.getElementById('task-assignee').value;
+            const dueDate = document.getElementById('task-due-date').value;
+            const progress = parseInt(document.getElementById('task-progress').value) || 0;
+
+            if (!title) { showToast('Please enter a task title', 'error'); return; }
+
+            if (id) {
+                const task = tasks.find(t => t.id === id);
+                if (task) {
+                    task.title = title; task.description = description; task.priority = priority;
+                    task.equipment = equipment; task.status = status; task.assignee = assignee;
+                    task.dueDate = dueDate; task.progress = progress;
+                    showToast('Task updated successfully');
+                }
+            } else {
+                tasks.push({ id: generateId(), title, description, priority, equipment, status, assignee, dueDate, progress, createdAt: new Date().toISOString() });
+                showToast('Task created successfully');
+            }
+            saveTasks();
+            renderAllTasks();
+            closeModal();
+        }
+
+        function viewTask(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+            currentTaskId = taskId;
+            const content = document.getElementById('view-modal-content');
+            const equipmentTag = task.equipment.charAt(0).toUpperCase() + task.equipment.slice(1);
+            content.innerHTML = `
+                <div style="margin-bottom:20px">
+                    <span class="card-id" style="font-size:14px;padding:4px 12px">${task.id}</span>
+                    <span class="tag tag-${task.equipment}" style="margin-left:10px">${equipmentTag}</span>
+                    <span class="tag" style="background:${getPriorityColor(task.priority)}20;color:${getPriorityColor(task.priority)};margin-left:5px">${task.priority.charAt(0).toUpperCase()+task.priority.slice(1)} Priority</span>
+                </div>
+                <h3 style="color:var(--lt-dark-blue);margin-bottom:15px">${escapeHtml(task.title)}</h3>
+                <p style="color:#666;line-height:1.6;margin-bottom:20px">${escapeHtml(task.description)}</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:20px">
+                    <div style="background:var(--lt-gray);padding:15px;border-radius:8px"><div style="font-size:12px;color:#666">Status</div><div style="font-weight:600;color:var(--lt-dark-blue)">${task.status.charAt(0).toUpperCase()+task.status.slice(1)}</div></div>
+                    <div style="background:var(--lt-gray);padding:15px;border-radius:8px"><div style="font-size:12px;color:#666">Assignee</div><div style="font-weight:600;color:var(--lt-dark-blue)">${escapeHtml(task.assignee||'Unassigned')}</div></div>
+                    <div style="background:var(--lt-gray);padding:15px;border-radius:8px"><div style="font-size:12px;color:#666">Due Date</div><div style="font-weight:600;color:var(--lt-dark-blue)">${formatDate(task.dueDate)}</div></div>
+                    <div style="background:var(--lt-gray);padding:15px;border-radius:8px"><div style="font-size:12px;color:#666">Progress</div><div style="font-weight:600;color:var(--lt-dark-blue)">${task.progress}%</div></div>
+                </div>
+                <div style="background:var(--lt-gray);padding:15px;border-radius:8px">
+                    <div style="font-size:12px;color:#666;margin-bottom:8px">Progress Bar</div>
+                    <div class="progress-bar" style="height:10px"><div class="progress-fill" style="width:${task.progress}%"></div></div>
+                </div>
+            `;
+            document.getElementById('view-modal').classList.add('active');
+        }
+
+        function editTask(taskId) { openModal(taskId); }
+
+        function editFromView() {
+            if (currentTaskId) {
+                closeModal();
+                setTimeout(() => openModal(currentTaskId), 200);
+            }
+        }
+
+        function deleteTask(taskId) {
+            if (confirm('Are you sure you want to delete this task?')) {
+                tasks = tasks.filter(t => t.id !== taskId);
+                saveTasks();
+                renderAllTasks();
+                showToast('Task deleted successfully');
+            }
+        }
+
+        function filterTasks() {
+            const search = document.getElementById('search-input').value.toLowerCase();
+            const priority = document.getElementById('priority-filter').value;
+            const equipment = document.getElementById('equipment-filter').value;
+            const assignee = document.getElementById('assignee-filter').value;
+            tasks.forEach(task => {
+                const card = document.getElementById(`task-${task.id}`);
+                if (!card) return;
+                const matchSearch = !search || task.title.toLowerCase().includes(search) || task.description.toLowerCase().includes(search) || task.id.toLowerCase().includes(search) || (task.assignee && task.assignee.toLowerCase().includes(search));
+                const matchPriority = !priority || task.priority === priority;
+                const matchEquipment = !equipment || task.equipment === equipment;
+                const matchAssignee = !assignee || task.assignee === assignee;
+                card.style.display = (matchSearch && matchPriority && matchEquipment && matchAssignee) ? 'block' : 'none';
+            });
+        }
+
+        function showContextMenu(e, taskId) {
+            e.preventDefault();
+            contextTaskId = taskId;
+            const menu = document.getElementById('context-menu');
+            menu.style.left = e.pageX + 'px';
+            menu.style.top = e.pageY + 'px';
+            menu.classList.add('active');
+        }
+
+        function contextAction(action) {
+            if (!contextTaskId) return;
+            switch(action) {
+                case 'view': viewTask(contextTaskId); break;
+                case 'edit': editTask(contextTaskId); break;
+                case 'duplicate': duplicateTask(contextTaskId); break;
+                case 'delete': deleteTask(contextTaskId); break;
+            }
+            document.getElementById('context-menu').classList.remove('active');
+        }
+
+        function duplicateTask(taskId) {
+            const task = tasks.find(t => t.id === taskId);
+            if (task) {
+                tasks.push({ ...task, id: generateId(), title: task.title + ' (Copy)', createdAt: new Date().toISOString() });
+                saveTasks();
+                renderAllTasks();
+                showToast('Task duplicated successfully');
+            }
+        }
+
+        document.addEventListener('click', () => { document.getElementById('context-menu').classList.remove('active'); });
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.innerHTML = `<span>${type==='success'?'✓':type==='error'?'✕':'⚠'}</span><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.style.animation = 'toastSlide 0.3s ease reverse'; setTimeout(() => toast.remove(), 300); }, 3000);
+        }
+
+        function toggleExportDropdown() { document.getElementById('export-dropdown').classList.toggle('show'); }
+
+        function exportToExcel() {
+            toggleExportDropdown();
+            if (!excelAvailable || typeof XLSX === 'undefined') {
+                showToast('Excel library not loaded. Please check internet connection.', 'error');
+                return;
+            }
+            const data = tasks.map(t => ({
+                'Task ID': t.id, 'Title': t.title, 'Description': t.description,
+                'Priority': t.priority.charAt(0).toUpperCase() + t.priority.slice(1),
+                'Equipment': t.equipment.charAt(0).toUpperCase() + t.equipment.slice(1),
+                'Status': t.status.charAt(0).toUpperCase() + t.status.slice(1),
+                'Assignee': t.assignee || 'Unassigned', 'Due Date': t.dueDate || 'N/A',
+                'Progress (%)': t.progress, 'Created': new Date(t.createdAt).toLocaleDateString('en-IN')
+            }));
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Tasks');
+            XLSX.writeFile(wb, `LT_CMB_Kanban_${new Date().toISOString().split('T')[0]}.xlsx`);
+            showToast('Excel exported successfully');
+        }
+
+        function exportToCSV() {
+            toggleExportDropdown();
+            if (!excelAvailable || typeof XLSX === 'undefined') {
+                showToast('Excel library not loaded. Please check internet connection.', 'error');
+                return;
+            }
+            const data = tasks.map(t => ({
+                'Task ID': t.id, 'Title': t.title, 'Description': t.description,
+                'Priority': t.priority, 'Equipment': t.equipment, 'Status': t.status,
+                'Assignee': t.assignee || '', 'Due Date': t.dueDate || '', 'Progress': t.progress
+            }));
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Tasks');
+            XLSX.writeFile(wb, `LT_CMB_Kanban_${new Date().toISOString().split('T')[0]}.csv`);
+            showToast('CSV exported successfully');
+        }
+
+        function exportData() {
+            toggleExportDropdown();
+            const data = JSON.stringify({ tasks, assignees, exportedAt: new Date().toISOString() }, null, 2);
+            const blob = new Blob([data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ltcmb_kanban_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('JSON exported successfully');
+        }
+
+        function importData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json,.xlsx,.xls,.csv';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const fileName = file.name.toLowerCase();
+                if (fileName.endsWith('.json')) {
+                    importJSON(file);
+                } else if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.csv')) {
+                    if (typeof XLSX === 'undefined') {
+                        showToast('Excel library not loaded. Please check internet connection.', 'error');
+                        return;
+                    }
+                    importExcel(file);
+                } else {
+                    showToast('Unsupported format. Use JSON, Excel, or CSV.', 'error');
+                }
+            };
+            input.click();
+        }
+
+        function importJSON(file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const imported = JSON.parse(event.target.result);
+                    if (imported.tasks && Array.isArray(imported.tasks)) {
+                        tasks = imported.tasks;
+                        if (imported.assignees) { assignees = imported.assignees; saveAssignees(); }
+                        saveTasks();
+                        renderAllTasks();
+                        showToast('Data imported successfully');
+                    } else if (Array.isArray(imported)) {
+                        tasks = imported;
+                        saveTasks();
+                        renderAllTasks();
+                        showToast('Tasks imported successfully');
+                    }
+                } catch (err) {
+                    showToast('Error: ' + err.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function importExcel(file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const data = new Uint8Array(event.target.result);
+                    const wb = XLSX.read(data, { type: 'array' });
+                    const jsonData = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+                    const imported = jsonData.map(r => ({
+                        id: r['Task ID'] || generateId(),
+                        title: r['Title'] || 'Untitled',
+                        description: r['Description'] || '',
+                        priority: (r['Priority'] || 'medium').toLowerCase(),
+                        equipment: (r['Equipment'] || 'parts').toLowerCase(),
+                        status: (r['Status'] || 'backlog').toLowerCase(),
+                        assignee: r['Assignee'] || '',
+                        dueDate: r['Due Date'] || '',
+                        progress: parseInt(r['Progress (%)'] || r['Progress'] || 0),
+                        createdAt: new Date().toISOString()
+                    }));
+                    tasks = [...tasks, ...imported];
+                    saveTasks();
+                    renderAllTasks();
+                    showToast(`Imported ${imported.length} tasks`);
+                } catch (err) {
+                    showToast('Error: ' + err.message, 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function openAssigneeModal() { renderAssigneeList(); document.getElementById('assignee-modal').classList.add('active'); }
+        function closeAssigneeModal() { document.getElementById('assignee-modal').classList.remove('active'); }
+
+        function addAssignee() {
+            const name = document.getElementById('new-assignee-name').value.trim();
+            const email = document.getElementById('new-assignee-email').value.trim();
+            if (!name) { showToast('Please enter a name', 'error'); return; }
+            if (assignees.some(a => a.name.toLowerCase() === name.toLowerCase())) {
+                showToast('Name already exists', 'error');
+                return;
+            }
+            assignees.push({ id: generateAssigneeId(), name, email, role: '' });
+            saveAssignees();
+            document.getElementById('new-assignee-name').value = '';
+            document.getElementById('new-assignee-email').value = '';
+            showToast('Team member added');
+        }
+
+        function openEditAssigneeModal(id) {
+            const a = assignees.find(x => x.id === id);
+            if (!a) return;
+            document.getElementById('edit-assignee-id').value = a.id;
+            document.getElementById('edit-assignee-name').value = a.name;
+            document.getElementById('edit-assignee-email').value = a.email || '';
+            document.getElementById('edit-assignee-role').value = a.role || '';
+            document.getElementById('edit-assignee-modal').classList.add('active');
+        }
+
+        function closeEditAssigneeModal() { document.getElementById('edit-assignee-modal').classList.remove('active'); }
+
+        function saveEditAssignee() {
+            const id = document.getElementById('edit-assignee-id').value;
+            const name = document.getElementById('edit-assignee-name').value.trim();
+            const email = document.getElementById('edit-assignee-email').value.trim();
+            const role = document.getElementById('edit-assignee-role').value.trim();
+            if (!name) { showToast('Please enter a name', 'error'); return; }
+            const a = assignees.find(x => x.id === id);
+            if (a) {
+                const oldName = a.name;
+                a.name = name; a.email = email; a.role = role;
+                if (oldName !== name) {
+                    tasks.forEach(t => { if (t.assignee === oldName) t.assignee = name; });
+                    saveTasks();
+                }
+                saveAssignees();
+                closeEditAssigneeModal();
+                showToast('Team member updated');
+            }
+        }
+
+        function deleteAssignee(id) {
+            const a = assignees.find(x => x.id === id);
+            if (!a) return;
+            const count = tasks.filter(t => t.assignee === a.name).length;
+            if (count > 0 && !confirm(`${a.name} has ${count} task(s). Delete anyway?`)) return;
+            tasks.forEach(t => { if (t.assignee === a.name) t.assignee = ''; });
+            assignees = assignees.filter(x => x.id !== id);
+            saveAssignees();
+            renderAssigneeList();
+            showToast('Team member removed');
+        }
+
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'n') { e.preventDefault(); openModal(); }
+                if (e.key === 'Escape') { closeModal(); closeViewModal(); closeAssigneeModal(); closeEditAssigneeModal(); }
+            });
+        }
+    </script>
+</body>
+</html>
